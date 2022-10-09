@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "211225225646",
+    "project_id": "dyrou1-9274c",
+    "storage_bucket": "dyrou1-9274c.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:211225225646:android:e679a014efa574cf7b403f",
+        "android_client_info": {
+          "package_name": "com.example.dy_rou"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "211225225646-jbu5u3oorsqfdlgk5gm2hdk2vhk5orps.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAgVmMBu5ku5B1u5Hf_9LXbLwDmjOkwaPo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "211225225646-jbu5u3oorsqfdlgk5gm2hdk2vhk5orps.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "211225225646-h9rc3ui00tup36sc9ge720j6onh4s3v8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.dyRou"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>211225225646-h9rc3ui00tup36sc9ge720j6onh4s3v8.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.211225225646-h9rc3ui00tup36sc9ge720j6onh4s3v8</string>
+	<key>API_KEY</key>
+	<string>AIzaSyD8jR2CONE2-el17YmC7U1vOqi36dTtrc4</string>
+	<key>GCM_SENDER_ID</key>
+	<string>211225225646</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.dyRou</string>
+	<key>PROJECT_ID</key>
+	<string>dyrou1-9274c</string>
+	<key>STORAGE_BUCKET</key>
+	<string>dyrou1-9274c.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:211225225646:ios:9bf18161ac7f335a7b403f</string>
+</dict>
+</plist>
