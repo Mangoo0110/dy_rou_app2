@@ -1,8 +1,9 @@
-import 'package:dy_rou/main.dart';
+import 'package:dy_rou/constants/routes.dart';
+import 'package:dy_rou/services/auth/auth_services.dart';
 import 'package:dy_rou/services/theme_services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:developer' as devtools show log;
+
 _appBar(BuildContext context, String title) {
   return AppBar(
     title: Text(title),
@@ -42,15 +43,35 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
     return Scaffold(
       appBar: _appBar(context, 'Verify email'),
       body: Column(children: [
-        const Text('Please verify your email:'),
+        const Text(
+            "we've sent you an email verification. Please open it to verify your account."),
+        const Text(
+            "If you haven't recieved a verification email yet, press the button again"),
         TextButton(
           onPressed: () async {
-            var user = FirebaseAuth.instance.currentUser;
-            await user?.sendEmailVerification();
-          
+            final user = AuthService.firebase().currentUser;
+            await AuthService.firebase().sendEmailVerification();
           },
           child: const Text('Send email verification'),
-        )
+        ),
+        TextButton(
+          onPressed: () async {
+            final user = AuthService.firebase().currentUser;
+            if(user!=null){
+            await AuthService.firebase().logOut();
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              registerRoute,
+              (route) => false,
+            );
+            }else{
+               Navigator.of(context).pushNamedAndRemoveUntil(
+              registerRoute,
+              (route) => false,
+            );
+            }
+          },
+          child: const Text('Restart'),
+        ),
       ]),
     );
   }
