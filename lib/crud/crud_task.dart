@@ -1,70 +1,143 @@
 //import 'dart:ffi';
 //import 'dart:html';
 
+import 'dart:async';
 
 import 'package:dy_rou/crud/crud_exception.dart';
+import 'package:dy_rou/extensions/filter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' show join;
 import 'package:path_provider/path_provider.dart';
 
 import 'package:flutter/foundation.dart';
 
-
 class TaskService {
   Database? _db;
-  Future<Task> updateTask({
-    required Task task,
-    required String taskName
-  }) async{
-    final db = _getDatabaseOrThrough();
 
-    await fetchTask(id: task.id);
-   final updateCount = await db.update(taskTable, {
-      taskNameColumn: taskName,
-      isSyncedWithCloudColumn: 0,
-    });
-    if(updateCount==0)
-    {
-      throw CouldNotUpdateTask();
-    }
-    else{
-      return await fetchTask(id: task.id);
-    }
-  }
+  List<DatabaseTask> _tasks = [];
 
-  Future<Iterable<Task> > fetchAllTask() async {
-   final db = _getDatabaseOrThrough();
-    final tasks = await db.query(
-      taskTable
+  DatabaseUser? _user;
+
+  static final TaskService _shared = TaskService._sharedInstance();
+  TaskService._sharedInstance() {
+    _tasksStreamcontroller = StreamController<List<DatabaseTask>>.broadcast(
+      onListen: () {
+        _tasksStreamcontroller.sink.add(_tasks);
+      },
     );
+  }
+  factory TaskService() => _shared;
 
-   return tasks.map((taskRows) => Task.fromRow(taskRows));
+  late final StreamController<List<DatabaseTask>> _tasksStreamcontroller;
 
+  Stream<List<DatabaseTask>> get allTasks => _tasksStreamcontroller.stream.filter((task) {
+    final currentUser =_user;
+    if(currentUser!=null) {
+      return task.userId == currentUser.id;
+    } else {
+      throw UserShouldBeSetBeforeReadingAllNotes();
+    }
+  });
+
+  Future<DatabaseUser> getOrCreateUser({
+    required String email,
+    bool setAsCurrentUser = true,
+   }) async {
+    try {
+      final user = await getUser(email: email);
+      if(setAsCurrentUser){
+        _user = user;
+      }
+      return user;
+    } on CouldNotFindUser {
+      final createdUser = await createUser(email: email);
+      if(setAsCurrentUser) {
+        _user = createdUser;
+      }
+      return createdUser;
+    } catch (e) {
+      rethrow;
+    }
   }
 
-  Future<Task> fetchTask({required int id}) async {
-    final db = _getDatabaseOrThrough();
-    final task = await db.query(
+  Future<void> _catcheTasks() async {
+    final allTasks = await fetchAllTask();
+    _tasks = allTasks.toList();
+    _tasksStreamcontroller.add(_tasks);
+  }
+
+  Future<DatabaseTask> updateTask({
+    required DatabaseTask task,
+    required String taskName,
+  }) async {
+    await _ensureDbIsOpen();
+    final db = _getDatabaseOrThrow();
+
+    //make sure task exist
+    await fetchTask(id: task.id);
+
+    //update db
+    final updateCount = await db.update(
+      taskTable,
+      {
+        taskNameColumn: taskName,
+        isSyncedWithCloudColumn: 0,
+      },
+      where: 'id = ?',
+      whereArgs: [task.id],
+    );
+    if (updateCount == 0) {
+      throw CouldNotUpdateTask();
+    } else {
+      final updatedTask = await fetchTask(id: task.id);
+      _tasks.removeWhere((task) => task.id == updatedTask.id);
+      _tasks.add(updatedTask);
+      _tasksStreamcontroller.add(_tasks);
+      return updatedTask;
+    }
+  }
+
+  Future<Iterable<DatabaseTask>> fetchAllTask() async {
+    await _ensureDbIsOpen();
+    final db = _getDatabaseOrThrow();
+    final tasks = await db.query(taskTable);
+
+    return tasks.map((taskRows) => DatabaseTask.fromRow(taskRows));
+  }
+
+  Future<DatabaseTask> fetchTask({required int id}) async {
+    await _ensureDbIsOpen();
+    final db = _getDatabaseOrThrow();
+    final tasks = await db.query(
       taskTable,
       limit: 1,
       where: 'id = ?',
       whereArgs: [id],
     );
-    if(task.isEmpty){
-      throw CouldNotFoundTask();
-    }
-    else{
-      return Task.fromRow(task.first);
+    if (tasks.isEmpty) {
+      throw CouldNotFindTask();
+    } else {
+      final task = DatabaseTask.fromRow(tasks.first);
+      _tasks.removeWhere((task) => task.id == id);
+      _tasks.add(task);
+      _tasksStreamcontroller.add(_tasks);
+      return task;
     }
   }
 
   Future<int> deleteAllTasks() async {
-    final db = _getDatabaseOrThrough();
-    return await db.delete(taskTable);
+    await _ensureDbIsOpen();
+    final db = _getDatabaseOrThrow();
+    final numberOfDeletions = await db.delete(taskTable);
+    _tasks = [];
+    _tasksStreamcontroller.add(_tasks);
+    return numberOfDeletions;
   }
 
   Future<void> deleteTask({required int id}) async {
-    final db = _getDatabaseOrThrough();
+    await _ensureDbIsOpen();
+    final db = _getDatabaseOrThrow();
     final deletedCount = await db.delete(
       taskTable,
       where: 'id=?',
@@ -72,16 +145,19 @@ class TaskService {
     );
     if (deletedCount == 0) {
       throw CouldNotDeleteTask();
+    } else {
+      _tasks.removeWhere((task) => task.id == id);
+      _tasksStreamcontroller.add(_tasks);
     }
   }
 
-  Future<Task> createTask({required DatabaseUser owner}) async {
-    final db = _getDatabaseOrThrough();
-
+  Future<DatabaseTask> createTask({required DatabaseUser owner}) async {
+    await _ensureDbIsOpen();
+    final db = _getDatabaseOrThrow();
     //Make sure owner exist in the database with the correct id.
     final dbUser = await getUser(email: owner.email);
     if (dbUser != owner) {
-      throw CouldNotFoundUser();
+      throw CouldNotFindUser();
     }
     const text = '';
     //Create tasks in database
@@ -91,19 +167,22 @@ class TaskService {
       isSyncedWithCloudColumn: 1
     });
 
-    final task = Task(
+    final task = DatabaseTask(
       id: taskId,
       userId: owner.id,
       taskName: text,
       isSyncedWithCloud: true,
     );
 
+    _tasks.add(task);
+    _tasksStreamcontroller.add(_tasks);
+
     return task;
   }
 
   Future<DatabaseUser> getUser({required String email}) async {
-    final db = _getDatabaseOrThrough();
-
+    await _ensureDbIsOpen();
+    final db = _getDatabaseOrThrow();
     final result = await db.query(
       userTable,
       limit: 1,
@@ -111,14 +190,15 @@ class TaskService {
       whereArgs: [email.toLowerCase()],
     );
     if (result.isEmpty) {
-      throw CouldNotFoundUser();
+      throw CouldNotFindUser();
     } else {
       return DatabaseUser.fromRow(result.first);
     }
   }
 
   Future<DatabaseUser> createUser({required String email}) async {
-    final db = _getDatabaseOrThrough();
+    await _ensureDbIsOpen();
+    final db = _getDatabaseOrThrow();
     final result = await db.query(
       userTable,
       limit: 1,
@@ -134,7 +214,8 @@ class TaskService {
   }
 
   Future<void> deleteUser({required String email}) async {
-    final db = _getDatabaseOrThrough();
+    await _ensureDbIsOpen();
+    final db = _getDatabaseOrThrow();
     final deletedCount = await db.delete(
       userTable,
       where: 'email=?',
@@ -145,7 +226,7 @@ class TaskService {
     }
   }
 
-  Database _getDatabaseOrThrough() {
+  Database _getDatabaseOrThrow() {
     final db = _db;
     if (db == null) {
       throw DatabaseIsNotOpen();
@@ -164,6 +245,14 @@ class TaskService {
     }
   }
 
+  Future<void> _ensureDbIsOpen() async {
+    try {
+      await open();
+    } on DatabaseAlreadyOpenException {
+      // emptyyyy
+    }
+  }
+
   Future<void> open() async {
     if (_db != null) {
       throw DatabaseAlreadyOpenException();
@@ -176,6 +265,7 @@ class TaskService {
 
       await db.execute(createUserTable);
       await db.execute(createTaskTable);
+      await _catcheTasks();
 //CREATE THE TASK TABLE
     } on MissingPlatformDirectoryException {
       throw UnableToGetDocumntsDirectory;
@@ -207,20 +297,20 @@ class DatabaseUser {
 }
 
 @immutable
-class Task {
+class DatabaseTask {
   final int id;
   final int userId;
   final String taskName;
   final bool isSyncedWithCloud;
 
-  Task({
+  const DatabaseTask({
     required this.id,
     required this.userId,
     required this.taskName,
     required this.isSyncedWithCloud,
   });
 
-  Task.fromRow(Map<String, Object?> map)
+  DatabaseTask.fromRow(Map<String, Object?> map)
       : id = map[idColumn] as int,
         userId = map[userIdColumn] as int,
         taskName = map[taskNameColumn] as String,
@@ -228,7 +318,7 @@ class Task {
             (map[isSyncedWithCloudColumn] as int) == 1 ? true : false;
 
   @override
-  bool operator ==(covariant Task other) => id == other.id;
+  bool operator ==(covariant DatabaseTask other) => id == other.id;
 
   @override
   String toString() => 'ID=$id, Task is $taskName';
@@ -242,24 +332,20 @@ const dbName = 'tasks.db';
 const userTable = 'user';
 const idColumn = 'id';
 const emailColumn = 'email';
-const taskTable = 'task';
+const taskTable = 'tasks';
 const userIdColumn = 'user_id';
 const taskNameColumn = 'task';
 const isSyncedWithCloudColumn = 'is_synced_with_cloud';
-const createTaskTable = ''' CREATE TABLE IF NOT EXIST "tasks"(
-      "id" INTGER NOT NULL,
-      "user_id" INTGER NOT NULL,
-      "task" TEXT NOT NULL UNIQUE,
-      "is_synced_with_cloud" INTGER NOT NULL DEFAULT 0,
+const createTaskTable = '''CREATE TABLE IF NOT EXISTS "tasks" (
+      "id" INTEGER NOT NULL,
+      "user_id" INTEGER NOT NULL,
+      "task" TEXT,
+      "is_synced_with_cloud" INTEGER NOT NULL DEFAULT 0,
       FOREIGN KEY("user_id") REFERENCES "user"("id"), 
       PRIMARY KEY("id" AUTOINCREMENT)
-      );
-
-''';
-const createUserTable = ''' CREATE TABLE IF NOT EXIST "user"(
-      "id" INTGER NOT NULL,
+      );''';
+const createUserTable = '''CREATE TABLE IF NOT EXISTS "user" (
+      "id" INTEGER NOT NULL,
       "email" TEXT NOT NULL UNIQUE,
       PRIMARY KEY("id" AUTOINCREMENT)
-      );
-
-''';
+      );''';

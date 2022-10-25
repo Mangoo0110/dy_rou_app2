@@ -1,4 +1,3 @@
-import 'dart:math';
 
 import 'package:dy_rou/services/auth/auth_exceptions.dart';
 import 'package:dy_rou/services/auth/auth_provider.dart';
@@ -38,21 +37,21 @@ void main() {
     });
 
     test('Create user should delegate to login function', () async {
-      final badEmailUser =  provider.createUser(
+      final badEmailUser = provider.createUser(
         email: 'foo@bar.com',
         password: 'anypassword',
       );
       expect(badEmailUser,
           throwsA(const TypeMatcher<UserNotFoundAuthException>()));
 
-      final badPassword =  provider.createUser(
+      final badPassword = provider.createUser(
         email: 'someone@bar.com',
         password: 'foobar',
       );
       expect(badPassword,
           throwsA(const TypeMatcher<WrongPasswordAuthException>()));
 
-      final user =  await provider.createUser(
+      final user = await provider.createUser(
         email: 'foo',
         password: 'bar',
       );
@@ -121,11 +120,15 @@ class MockAuthProvider implements AuthProvider {
   }
 
   @override
-  Future<AuthUser> login({required String email, required String password}) async{
+  Future<AuthUser> login(
+      {required String email, required String password}) async {
     if (!isInitialized) throw NotInitializedException();
     if (email == 'foo@bar.com') throw UserNotFoundAuthException();
     if (password == 'foobar') throw WrongPasswordAuthException();
-    const user = AuthUser(isEmailVerified: false);
+    const user = AuthUser(
+      isEmailVerified: false,
+      email: 'foo@bar.com',
+    );
     _user = user;
     return Future.value(user);
   }
@@ -135,7 +138,10 @@ class MockAuthProvider implements AuthProvider {
     if (!isInitialized) throw NotInitializedException();
     final user = _user;
     if (user == null) throw UserNotFoundAuthException();
-    const newuser = AuthUser(isEmailVerified: true);
+    const newuser = AuthUser(
+      isEmailVerified: true,
+      email: 'foo@bar.com',
+    );
     _user = newuser;
   }
 }

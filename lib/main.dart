@@ -2,13 +2,15 @@
 
 //import 'dart:js';
 
+
 import 'package:dy_rou/auth_view/auth_login_view.dart';
 import 'package:dy_rou/auth_view/auth_register_view.dart';
 import 'package:dy_rou/auth_view/auth_verify_email.dart';
 import 'package:dy_rou/constants/routes.dart';
 import 'package:dy_rou/services/auth/auth_services.dart';
 import 'package:dy_rou/services/theme_services.dart';
-import 'package:dy_rou/task_view/tasks.dart';
+import 'package:dy_rou/task_view/create_update_task_view.dart';
+import 'package:dy_rou/task_view/tasks_view.dart';
 import 'package:dy_rou/workspace/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
@@ -32,6 +34,7 @@ void main() async {
         homeRoute: (context) => const HomePage(),
         tasksRoute: (context) => const Taskview(),
         verifyEmailRoute: (context) => const VerifyEmailView(),
+        createOrUpdateTaskRoute: (context) => const CreateUpdateTaskView(),
       },
     ),
   );

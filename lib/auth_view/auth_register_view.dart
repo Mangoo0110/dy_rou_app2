@@ -2,7 +2,7 @@ import 'package:dy_rou/constants/routes.dart';
 import 'package:dy_rou/services/auth/auth_exceptions.dart';
 import 'package:dy_rou/services/auth/auth_services.dart';
 import 'package:dy_rou/services/theme_services.dart';
-import 'package:dy_rou/utilities/showErrorDialogs.dart';
+import 'package:dy_rou/utilities/dialogs/error_dialog.dart';
 import 'package:flutter/material.dart';
 import 'dart:developer' as devtools show log;
 
