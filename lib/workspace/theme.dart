@@ -6,7 +6,7 @@ static final light= ThemeData(
       );
 
 static final dark= ThemeData.dark().copyWith(
-        appBarTheme: AppBarTheme(color: Colors.blueGrey),
+        appBarTheme: AppBarTheme(color: Colors.black),
        // brightness: Brightness.dark,
         scaffoldBackgroundColor: Colors.black
       );

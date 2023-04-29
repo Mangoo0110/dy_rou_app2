@@ -3,11 +3,16 @@ import 'package:dy_rou/crud/crud_task.dart';
 import 'package:dy_rou/enums/menu_actions.dart';
 import 'package:dy_rou/services/auth/auth_services.dart';
 import 'package:dy_rou/services/auth/firebase_auth_provider.dart';
+import 'package:dy_rou/services/cloud/cloud_task.dart';
+import 'package:dy_rou/services/cloud/firebase_cloud_storage.dart';
 import 'package:dy_rou/services/theme_services.dart';
 import 'package:dy_rou/task_view/tasks_list_view.dart';
 import 'package:dy_rou/utilities/dialogs/logout_dialog.dart';
 import 'package:flutter/material.dart';
 import 'dart:developer' as devtools show log;
+
+import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 class Taskview extends StatefulWidget {
   const Taskview({Key? key}) : super(key: key);
@@ -17,27 +22,61 @@ class Taskview extends StatefulWidget {
 }
 
 class _TaskviewState extends State<Taskview> {
-  late final TaskService _taskService;
-  String get userEmail => AuthService.firebase().currentUser!.email!;
+  late final FirebaseCloudStorage _taskService;
+  String get userId => AuthService.firebase().currentUser!.id;
+  DateTime kdate = DateTime.now(); 
+  //String get userEmail => AuthService.firebase().currentUser!.email;
 
   @override
   void initState() {
-    _taskService = TaskService();
-    _taskService.open();
+    _taskService = FirebaseCloudStorage();
+    //_taskService.open();
     super.initState();
   }
 
   @override
   void dispose() {
-    _taskService.close();
+    _taskService;
+    //_taskService.close();
     super.dispose();
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _appBar(context, 'Taskview'),
-      body: FutureBuilder(
+      appBar: _appBar(),
+      body: 
+          StreamBuilder(
+                    stream: _taskService.allTasks(ownerUserId: userId, date: kdate),
+                    builder: (context, snapshot) {
+                      switch (snapshot.connectionState) {
+                        case ConnectionState.waiting:
+                        case ConnectionState.active:
+                          if (snapshot.hasData) {
+                            final allTasks = snapshot.data as Iterable<CloudTask>;
+                            return TasksListView(
+                              tasks: allTasks,
+                              onDeleteTask: (task) async {
+                                await _taskService.deleteTask(documentId: task.documentId);
+                              },
+                              onTap: (task) {
+                                Navigator.of(context).pushNamed(
+                                  createOrUpdateTaskRoute,
+                                  arguments: task,
+                                );
+                              },
+                            );
+                          } else {
+                            return const CircularProgressIndicator();
+                          }
+                        default:
+                          return const CircularProgressIndicator();
+                      }
+                    },
+                  ),
+      );
+  }
+      /* FutureBuilder(
         future: _taskService.getOrCreateUser(email: userEmail),
         builder: (context, snapshot) {
           switch (snapshot.connectionState) {
@@ -49,7 +88,7 @@ class _TaskviewState extends State<Taskview> {
                     case ConnectionState.waiting:
                     case ConnectionState.active:
                       if (snapshot.hasData) {
-                        final allTasks = snapshot.data as List<DatabaseTask>;
+                        final allTasks = snapshot.data as List<CloudTask>;
                         return TasksListView(
                           tasks: allTasks,
                           onDeleteTask: (task) async {
@@ -74,22 +113,18 @@ class _TaskviewState extends State<Taskview> {
               return const CircularProgressIndicator();
           }
         },
-      ),
-    );
-  }
-}
+      ),*/
 
-_appBar(BuildContext context, String title) {
+    _appBar() {
   return AppBar(
-    title: Text(title),
+    title: Text(dateWhen(kdate)),
     leading: GestureDetector(
       onTap: () {
         ThemeServices().switchTheme();
-        print(DateTime.now().day);
       },
       child: const Icon(
         Icons.nightlight_round,
-        size: 20,
+        size: 28,
       ),
     ),
     toolbarHeight: MediaQuery.of(context).size.height * 0.06,
@@ -99,6 +134,18 @@ _appBar(BuildContext context, String title) {
           Navigator.of(context).pushNamed(createOrUpdateTaskRoute);
         },
         icon: const Icon(Icons.add),
+      ),
+      IconButton(
+        onPressed: () async{
+          final pickedDate = await pickDate(kdate);
+          if(pickedDate==null)return;
+          else{
+             kdate = pickedDate;
+             setState(() {
+             });
+          }
+        },
+        icon: const Icon(Icons.calendar_month),
       ),
       PopupMenuButton<MenuAction>(
         onSelected: (value) async {
@@ -128,3 +175,28 @@ _appBar(BuildContext context, String title) {
     ],
   );
 }
+Future<DateTime?> pickDate(initialDate) async {
+  final date = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2200));
+  if (date == null) return null;
+  return date;
+}
+
+  }
+  
+  String dateWhen(DateTime kdate) {
+    var millisecondsPerDay = 86400000;
+    var today = (DateTime.now().millisecondsSinceEpoch)/millisecondsPerDay;
+    var tommorrow = today + Duration.millisecondsPerDay/millisecondsPerDay;
+    var yesterday = today - Duration.millisecondsPerDay/millisecondsPerDay;
+    var exp = kdate.millisecondsSinceEpoch/millisecondsPerDay;
+    
+    return DateFormat("yMMMMd").format(kdate);
+    
+  }
+
+ 
+

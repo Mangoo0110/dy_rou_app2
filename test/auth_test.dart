@@ -1,4 +1,3 @@
-
 import 'package:dy_rou/services/auth/auth_exceptions.dart';
 import 'package:dy_rou/services/auth/auth_provider.dart';
 import 'package:dy_rou/services/auth/auth_user.dart';
@@ -128,6 +127,7 @@ class MockAuthProvider implements AuthProvider {
     const user = AuthUser(
       isEmailVerified: false,
       email: 'foo@bar.com',
+      id: 'id1',
     );
     _user = user;
     return Future.value(user);
@@ -141,6 +141,7 @@ class MockAuthProvider implements AuthProvider {
     const newuser = AuthUser(
       isEmailVerified: true,
       email: 'foo@bar.com',
+      id: 'id1',
     );
     _user = newuser;
   }
