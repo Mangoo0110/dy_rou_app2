@@ -1,14 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:dy_rou/services/cloud/cloud_exceptions.dart';
-import 'package:dy_rou/services/cloud/cloud_storage_constants.dart';
-import 'package:dy_rou/services/cloud/cloud_task.dart';
-import 'package:dy_rou/services/time_services.dart';
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:dy_rou/services/cloud/task_storage/cloud_exceptions.dart';
+import 'package:dy_rou/services/cloud/task_storage/cloud_storage_constants.dart';
+import 'package:dy_rou/services/cloud/task_storage/cloud_task.dart';
+
 
 class FirebaseCloudStorage {
-  var tasks = FirebaseFirestore.instance.collection('tasks');
+  final tasks = FirebaseFirestore.instance.collection('tasks');
   String greater = "greater";
   String smaller = "smaller";
   String equal = "equal";
@@ -28,7 +25,7 @@ class FirebaseCloudStorage {
     required DateTime taskFinishesAt,
   }) async {
     try {
-      await tasks.doc(documentId).update({taskTitle: title, fromDate: taskStartsAt, toDate: taskFinishesAt,});
+      await tasks.doc(documentId).update({taskTitle: title, fromDate: taskStartsAt, toDate: taskFinishesAt});
     } catch (_) {
       throw CouldNotUpdateTaskException();
     }

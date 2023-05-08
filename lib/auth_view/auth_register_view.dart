@@ -1,6 +1,9 @@
+import 'dart:math';
+
 import 'package:dy_rou/constants/routes.dart';
 import 'package:dy_rou/services/auth/auth_exceptions.dart';
 import 'package:dy_rou/services/auth/auth_services.dart';
+import 'package:dy_rou/services/cloud/User_details_storage/firebase_cloud_user_details.dart';
 import 'package:dy_rou/services/theme_services.dart';
 import 'package:dy_rou/utilities/dialogs/error_dialog.dart';
 import 'package:flutter/material.dart';
@@ -64,10 +67,18 @@ class _RegisterViewState extends State<RegisterView> {
                   email: email,
                   password: password,
                 );
+                
                 final user = AuthService.firebase().currentUser;
                 print('user is ${user.toString()}');
+                
                if(user!=null) {
-                await AuthService.firebase().sendEmailVerification();
+                //await AuthService.firebase().sendEmailVerification();
+               try{ 
+                await FirebaseCloudUserDetailsStorage().createNewUserDetails(userId: user.id, userEmail: user.email);
+               }
+               catch(e){
+                print(e.toString());
+               }
                 Navigator.of(context).pushNamed(verifyEmailRoute);
                }
               //  else {
@@ -90,7 +101,7 @@ class _RegisterViewState extends State<RegisterView> {
                   'Email is already in use. You can login with this email.',
                 );
               } on InvalidEmailAuthException {
-                print("GOt the email problem but..");
+                print("Got the email problem but..");
                 await showErrorDialog(
                   context,
                   'Invalid email address.',

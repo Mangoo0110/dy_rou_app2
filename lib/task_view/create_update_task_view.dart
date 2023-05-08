@@ -1,13 +1,13 @@
 //import 'package:dy_rou/crud/crud_task.dart';
+import 'dart:math';
+
 import 'package:dy_rou/constants/routes.dart';
 import 'package:dy_rou/services/auth/auth_services.dart';
-import 'package:dy_rou/task_view/tasks_view.dart';
+import 'package:dy_rou/services/cloud/task_storage/firebase_cloud_storage.dart';
 import 'package:dy_rou/utilities/generics/get_arguments.dart';
 import 'package:flutter/material.dart';
-import 'package:dy_rou/services/cloud/firebase_cloud_storage.dart';
-import 'package:dy_rou/services/cloud/cloud_task.dart';
-import 'package:dy_rou/services/cloud/cloud_exceptions.dart';
-import 'package:get/get.dart';
+
+import 'package:dy_rou/services/cloud/task_storage/cloud_task.dart';
 import 'package:intl/intl.dart';
 
 class CreateUpdateTaskView extends StatefulWidget {
@@ -21,16 +21,12 @@ class _CreateUpdateTaskViewState extends State<CreateUpdateTaskView> {
   //DatabaseTask? _task;
   late DateTime taskStartsAt;
   late DateTime taskFinishesAt;
+  int timeGap =const Duration(hours: 1).inMilliseconds;
   bool changingDateTimes= false;
   bool updating = false;
   bool creating = false;
-  //bool changingDateTimes = false; 
-  // DateTime fromTask = DateTime.now();
-  // DateTime toTask = DateTime.now().add(const Duration(hours: 1));
+  
   late int t;
-  //int startDate = DateTime.now();
-  //int endDate = DateTime.now().millisecond;
-
   CloudTask? _task;
   //late final TaskService _taskService;
   late FirebaseCloudStorage _taskService;
@@ -38,12 +34,12 @@ class _CreateUpdateTaskViewState extends State<CreateUpdateTaskView> {
   String updateText='';
   @override
   void initState() {
+    
     _taskService = FirebaseCloudStorage();
     _textController = TextEditingController();
     taskStartsAt = DateTime.now();
     taskFinishesAt = DateTime.now().add(const Duration(hours: 1));
     t=0;
-    //print("Count1 is $t ......\n");
     super.initState();
   }
 
@@ -117,6 +113,7 @@ class _CreateUpdateTaskViewState extends State<CreateUpdateTaskView> {
     if (task != null) {
       _taskService.deleteTask(documentId: task.documentId);
     }
+    else print("task is null");
   }
 
   void _saveTaskIfTextIsNotEmpty() async {
@@ -143,6 +140,7 @@ class _CreateUpdateTaskViewState extends State<CreateUpdateTaskView> {
 
   @override
   Widget build(BuildContext context) {
+    //var size = MediaQuery.of(context).size;
     //t++;
     print("Count is $t \n");
     final color = Colors.green.shade500;
@@ -160,16 +158,20 @@ class _CreateUpdateTaskViewState extends State<CreateUpdateTaskView> {
         actions: <Widget>[
           IconButton(
               onPressed: () {
+               if(!taskFinishesAt.isBefore(taskStartsAt)){
                 _saveTaskIfTextIsNotEmpty();
                 Navigator.of(context).pop(
                   createOrUpdateTaskRoute
                 );
+               }
               },
               icon: const Icon(Icons.check),
           ),
-        ],
-        backgroundColor: Colors.black,
+        ], 
+        backgroundColor: Colors.black, 
       ),
+     // resizeToAvoidBottomInset: true,
+     
       body: FutureBuilder(
         future: createOrGetExistingTask(BuildContext),
         builder: (context, snapshot) {
@@ -177,7 +179,7 @@ class _CreateUpdateTaskViewState extends State<CreateUpdateTaskView> {
             case ConnectionState.done:
               //_task = snapshot.data as DatabaseTask;
               //_setupTextControllerListener();
-              return Column(
+              return ListView(
                 children: [
                   TextField(
                     controller: _textController,
@@ -196,6 +198,12 @@ class _CreateUpdateTaskViewState extends State<CreateUpdateTaskView> {
                     title: Column(children: [
                       from(),
                       to(),
+                      taskFinishesAt.isBefore(taskStartsAt)?Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded) ,
+                          Text("Start Time cannot be after Finish Time",style: TextStyle(color: Colors.red.shade200,fontSize: 14)),
+                        ],
+                      ):const Text(""),
                     ]),
                   )
                 ],
@@ -210,113 +218,101 @@ class _CreateUpdateTaskViewState extends State<CreateUpdateTaskView> {
   }
 
   Widget from() {
-    return Row(
-      children: [
-        const Expanded(
-            //flex: 2,
-            child: Text(
-              ' From',
-              style: TextStyle(fontSize: 18),
-            )),
-        Expanded(
-          //flex: 1,
-          child: TextButton(
+    return Container(
+      color: taskFinishesAt.isBefore(taskStartsAt)?Colors.red.shade200:Colors.transparent,
+      child: Row(
+        children: [
+          taskFinishesAt.isBefore(taskStartsAt)?Row(
+            children: const[
+            //  Icon(Icons.error, color: Colors.red),
+              Text(
+            'From',
+            style: TextStyle(fontSize: 18,color: Colors.red),
+          ),
+            ],
+          ): const Text(
+            'From',
+            style: TextStyle(fontSize: 18),
+          ),
+          TextButton(
               onPressed: () async {
               final  fromTask =
                     await pickDate(taskStartsAt);
                 if(fromTask==null){
-                  print("null from fromTask Date picker\n");
                   return;
                 }
                 else{
                   changingDateTimes =true;
-                  taskStartsAt = fromTask;
-                  print("Date picked is $taskStartsAt ..."); 
-                  t++;
-                  //_saveTaskIfTextIsNotEmpty();
+                  taskStartsAt = fromTask;                   
                   updateText = _textController.text;
-                  if(taskFinishesAt.isBefore(taskStartsAt)) taskFinishesAt = taskStartsAt.add(const Duration(hours: 1));
-                setState(() {});
+                  setState(() {});
                 }
               },
-              child: Text(toDate(taskStartsAt))),
-        ),
-        Expanded(
-          child: TextButton(
+              child: Text(toDate(taskStartsAt),style: TextStyle(fontSize: 16,color: (taskFinishesAt.isBefore(taskStartsAt)?Colors.red: Colors.blue.shade900) ))),
+          TextButton(
               onPressed: () async {
-              final  fromTask =
+              final fromTask =
                     await pickTime(taskStartsAt);
                 if (fromTask == null){
-                  print("null from fromTask Time picker\n");
                   return;
                 }
                 else {
                   changingDateTimes = true;
                   taskStartsAt = fromTask;
                   updateText = _textController.text;
-                  if(taskFinishesAt.isBefore(taskStartsAt)) taskFinishesAt = taskStartsAt.add(const Duration(hours: 1));
                   setState(() {
                   });
                 }
               },
-              child: Text(toTime(taskStartsAt))),
-        ),
-      ],
+              child: Text(toTime(taskStartsAt),style:TextStyle(fontSize: 16, color: (taskFinishesAt.isBefore(taskStartsAt)?Colors.red:Colors.blue.shade900)))),
+        ],
+      ),
     );
   }
 
   Widget to() {
-    return Row(
-      children: [
-        const Expanded(
-            //flex: 2,
-            child: Text(
-              ' To',
-              style: TextStyle(fontSize: 18),
-            )),
-        Expanded(
-          //flex: 1,
-          child: TextButton(
+    return Container(
+      color:Colors.transparent,
+      child:Row(
+        children: [
+          const Text(
+            'To     ',
+            style: TextStyle(fontSize: 18),
+          ),
+          TextButton(
               onPressed: () async {
                 final toTask =
                     await pickDate(taskFinishesAt);
                 if (toTask == null){
-                  print("null from toTask Date picker\n");
                   return;
                 }
                 else {
                   changingDateTimes = true;
                   taskFinishesAt = toTask;
                   updateText = _textController.text;
-                  print("Date picked is $toTask ...");
-                  if(taskFinishesAt.isBefore(taskStartsAt)) taskStartsAt = taskFinishesAt.subtract(const Duration(hours: 1));
                   setState(() {
                    });
                 }
               },
-              child: Text(toDate(taskFinishesAt))),
-        ),
-        Expanded(
-          child: TextButton(
+              child: Text(toDate(taskFinishesAt),style:  TextStyle(fontSize: 16, color: Colors.blue.shade900))),
+          TextButton(
               onPressed: () async {
               final toTask =
                     await pickTime(taskFinishesAt);
                 if (toTask == null){
-                  print("null from toTask Time picker\n");
                   return;
                 }
                 else {
                   changingDateTimes = true;
                   taskFinishesAt = toTask;
                   updateText = _textController.text;
-                  if(taskFinishesAt.isBefore(taskStartsAt)) taskStartsAt = taskFinishesAt.subtract(const Duration(hours: 1));
                   setState(() {
                   });
                 }
               },
-              child: Text(toTime(taskFinishesAt))),
-        ),
-      ],
+              child: Text(toTime(taskFinishesAt),style:  TextStyle(fontSize: 16, color: Colors.blue.shade900),)),
+        ],
+      ),
     );
   }
   Future<DateTime?> pickDate(initialDate) async {
@@ -326,13 +322,10 @@ class _CreateUpdateTaskViewState extends State<CreateUpdateTaskView> {
       firstDate: DateTime(2000,1),
       lastDate: DateTime(2200));
   if (date == null) return null;
-  print("initial date is $initialDate ");
   final time = Duration(hours: initialDate.hour, minutes: initialDate.minute);
 
-  print("initial time is $time  ");
   //date.add(time);
   date = date.add(time);
-  print("Date is $date  ");
   return date;
  }
 
@@ -344,20 +337,17 @@ Future<DateTime?> pickTime(initialDate) async {
   final time = Duration(hours: timeOfDay.hour, minutes: timeOfDay.minute);
   
   date = date.add(time);
-  print("Time Date is $date ....");
   return date;
  }
 }
 
 String toDate(DateTime dateAndTime) {
   final date = DateFormat.yMMMEd().format(dateAndTime);
-  print("Date is $date\n");
   return date;
 }
 
 String toTime(DateTime dateAndTime) {
   final time = DateFormat.jm().format(dateAndTime);
-  print("Time is $time\n");
   return time;
 }
 

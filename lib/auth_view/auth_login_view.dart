@@ -177,10 +177,6 @@ _appBar(BuildContext context, String title) {
     ),
     toolbarHeight: MediaQuery.of(context).size.height * 0.06,
     actions: const [
-      Icon(
-        Icons.person,
-        size: 20,
-      ),
       SizedBox(
         width: 20,
       ),

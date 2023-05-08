@@ -2,16 +2,15 @@ import 'package:dy_rou/constants/routes.dart';
 import 'package:dy_rou/crud/crud_task.dart';
 import 'package:dy_rou/enums/menu_actions.dart';
 import 'package:dy_rou/services/auth/auth_services.dart';
-import 'package:dy_rou/services/auth/firebase_auth_provider.dart';
-import 'package:dy_rou/services/cloud/cloud_task.dart';
-import 'package:dy_rou/services/cloud/firebase_cloud_storage.dart';
+import 'package:dy_rou/services/cloud/task_storage/cloud_task.dart';
+import 'package:dy_rou/services/cloud/task_storage/firebase_cloud_storage.dart';
 import 'package:dy_rou/services/theme_services.dart';
 import 'package:dy_rou/task_view/tasks_list_view.dart';
 import 'package:dy_rou/utilities/dialogs/logout_dialog.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:developer' as devtools show log;
 
-import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 class Taskview extends StatefulWidget {
@@ -117,26 +116,9 @@ class _TaskviewState extends State<Taskview> {
 
     _appBar() {
   return AppBar(
-    title: Text(dateWhen(kdate)),
-    leading: GestureDetector(
-      onTap: () {
-        ThemeServices().switchTheme();
-      },
-      child: const Icon(
-        Icons.nightlight_round,
-        size: 28,
-      ),
-    ),
-    toolbarHeight: MediaQuery.of(context).size.height * 0.06,
-    actions: [
-      IconButton(
-        onPressed: () {
-          Navigator.of(context).pushNamed(createOrUpdateTaskRoute);
-        },
-        icon: const Icon(Icons.add),
-      ),
-      IconButton(
-        onPressed: () async{
+    title: TextButton(
+      child:Text(dateWhen(kdate),style: const TextStyle(fontSize: 20),),
+      onPressed: ()async{
           final pickedDate = await pickDate(kdate);
           if(pickedDate==null)return;
           else{
@@ -145,8 +127,22 @@ class _TaskviewState extends State<Taskview> {
              });
           }
         },
-        icon: const Icon(Icons.calendar_month),
       ),
+    leading: IconButton(
+        icon: Icon(Icons.person),
+        onPressed: () {
+          Navigator.of(context).pushNamed(userInfoRoute);
+        },
+      ),
+    toolbarHeight: MediaQuery.of(context).size.height * 0.06,
+    actions: [
+      IconButton(
+        onPressed: () {
+          Navigator.of(context).pushNamed(createOrUpdateTaskRoute);
+        },
+        icon: const Icon(Icons.add),
+      ),
+      
       PopupMenuButton<MenuAction>(
         onSelected: (value) async {
           switch (value) {

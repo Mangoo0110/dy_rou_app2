@@ -11,7 +11,9 @@ import 'package:dy_rou/services/auth/auth_services.dart';
 import 'package:dy_rou/services/theme_services.dart';
 import 'package:dy_rou/task_view/create_update_task_view.dart';
 import 'package:dy_rou/task_view/tasks_view.dart';
+import 'package:dy_rou/user_details_view/user_info.dart';
 import 'package:dy_rou/workspace/theme.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:get_storage/get_storage.dart';
@@ -35,6 +37,7 @@ void main() async {
         tasksRoute: (context) => const Taskview(),
         verifyEmailRoute: (context) => const VerifyEmailView(),
         createOrUpdateTaskRoute: (context) => const CreateUpdateTaskView(),
+        userInfoRoute: (context) => const UserInformation(),
       },
     ),
   );
